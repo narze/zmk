@@ -299,7 +299,8 @@ static uint8_t split_central_sensor_desc_discovery_func(struct bt_conn *conn,
         sensor_subscribe_params.notify = split_central_sensor_notify_func;
         sensor_subscribe_params.value = BT_GATT_CCC_NOTIFY;
         sensor_subscribe_params.ccc_handle = attr->handle;
-        split_central_subscribe(conn, &sensor_subscribe_params);
+        split_central_subscribe(conn);
+        // split_central_subscribe(conn, &sensor_subscribe_params);
     }
 
     return BT_GATT_ITER_STOP;
