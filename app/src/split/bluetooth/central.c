@@ -315,8 +315,6 @@ static uint8_t split_central_chrc_discovery_func(struct bt_conn *conn,
         return BT_GATT_ITER_STOP;
     }
 
-    int err;
-
     if (!attr->user_data) {
         LOG_ERR("Required user data not passed to discovery");
         return BT_GATT_ITER_STOP;
@@ -357,6 +355,8 @@ static uint8_t split_central_chrc_discovery_func(struct bt_conn *conn,
 static uint8_t split_central_service_discovery_func(struct bt_conn *conn,
                                                     const struct bt_gatt_attr *attr,
                                                     struct bt_gatt_discover_params *params) {
+    int err;
+
     if (!attr) {
         LOG_DBG("Discover complete");
         (void)memset(params, 0, sizeof(*params));
@@ -407,9 +407,9 @@ static uint8_t split_central_service_discovery_func(struct bt_conn *conn,
         }
 #endif /* ZMK_KEYMAP_HAS_SENSORS */
     } else {
-        subscribe_params.notify = split_central_notify_func;
-        subscribe_params.value = BT_GATT_CCC_NOTIFY;
-        subscribe_params.ccc_handle = attr->handle;
+        slot->subscribe_params.notify = split_central_notify_func;
+        slot->subscribe_params.value = BT_GATT_CCC_NOTIFY;
+        slot->subscribe_params.ccc_handle = attr->handle;
 
         split_central_subscribe(conn);
         // split_central_subscribe(conn, &subscribe_params);
@@ -427,7 +427,7 @@ static uint8_t split_central_service_discovery_func(struct bt_conn *conn,
     slot->discover_params.start_handle = attr->handle + 1;
     slot->discover_params.type = BT_GATT_DISCOVER_CHARACTERISTIC;
 
-    int err = bt_gatt_discover(conn, &slot->discover_params);
+    err = bt_gatt_discover(conn, &slot->discover_params);
     if (err) {
         LOG_ERR("Failed to start discovering split service characteristics (err %d)", err);
     }
