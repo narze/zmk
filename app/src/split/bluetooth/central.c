@@ -284,7 +284,7 @@ static uint8_t split_central_sensor_desc_discovery_func(struct bt_conn *conn,
 
     if (!bt_uuid_cmp(sensor_discover_params.uuid,
                      BT_UUID_DECLARE_128(ZMK_SPLIT_BT_CHAR_SENSOR_STATE_UUID))) {
-        memcpy(&sensor_uuid, BT_UUID_GATT_CCC, sizeof(uuid));
+        memcpy(&sensor_uuid, BT_UUID_GATT_CCC, sizeof(split_service_uuid));
         sensor_discover_params.uuid = &sensor_uuid.uuid;
         sensor_discover_params.start_handle = attr->handle;
         sensor_discover_params.type = BT_GATT_DISCOVER_DESCRIPTOR;
@@ -370,8 +370,8 @@ static uint8_t split_central_service_discovery_func(struct bt_conn *conn,
     }
 
     if (!bt_uuid_cmp(discover_params.uuid, BT_UUID_DECLARE_128(ZMK_SPLIT_BT_SERVICE_UUID))) {
-        memcpy(&uuid, BT_UUID_DECLARE_128(ZMK_SPLIT_BT_CHAR_POSITION_STATE_UUID), sizeof(uuid));
-        discover_params.uuid = &uuid.uuid;
+        memcpy(&split_service_uuid, BT_UUID_DECLARE_128(ZMK_SPLIT_BT_CHAR_POSITION_STATE_UUID), sizeof(split_service_uuid));
+        discover_params.uuid = &split_service_uuid.uuid;
         discover_params.start_handle = attr->handle + 1;
         discover_params.type = BT_GATT_DISCOVER_CHARACTERISTIC;
 
@@ -381,8 +381,8 @@ static uint8_t split_central_service_discovery_func(struct bt_conn *conn,
         }
     } else if (!bt_uuid_cmp(discover_params.uuid,
                             BT_UUID_DECLARE_128(ZMK_SPLIT_BT_CHAR_POSITION_STATE_UUID))) {
-        memcpy(&uuid, BT_UUID_GATT_CCC, sizeof(uuid));
-        discover_params.uuid = &uuid.uuid;
+        memcpy(&split_service_uuid, BT_UUID_GATT_CCC, sizeof(split_service_uuid));
+        discover_params.uuid = &split_service_uuid.uuid;
         discover_params.start_handle = attr->handle + 2;
         discover_params.type = BT_GATT_DISCOVER_DESCRIPTOR;
         subscribe_params.value_handle = bt_gatt_attr_value_handle(attr);
