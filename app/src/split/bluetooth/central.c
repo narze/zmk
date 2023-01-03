@@ -370,25 +370,25 @@ static uint8_t split_central_service_discovery_func(struct bt_conn *conn,
         LOG_ERR("No peripheral state found for connection");
     }
 
-    if (!bt_uuid_cmp(discover_params.uuid, BT_UUID_DECLARE_128(ZMK_SPLIT_BT_SERVICE_UUID))) {
+    if (!bt_uuid_cmp(slot->discover_params.uuid, BT_UUID_DECLARE_128(ZMK_SPLIT_BT_SERVICE_UUID))) {
         memcpy(&split_service_uuid, BT_UUID_DECLARE_128(ZMK_SPLIT_BT_CHAR_POSITION_STATE_UUID), sizeof(split_service_uuid));
-        discover_params.uuid = &split_service_uuid.uuid;
-        discover_params.start_handle = attr->handle + 1;
-        discover_params.type = BT_GATT_DISCOVER_CHARACTERISTIC;
+        slot->discover_params.uuid = &split_service_uuid.uuid;
+        slot->discover_params.start_handle = attr->handle + 1;
+        slot->discover_params.type = BT_GATT_DISCOVER_CHARACTERISTIC;
 
-        err = bt_gatt_discover(conn, &discover_params);
+        err = bt_gatt_discover(conn, &slot->discover_params);
         if (err) {
             LOG_ERR("Discover failed (err %d)", err);
         }
-    } else if (!bt_uuid_cmp(discover_params.uuid,
+    } else if (!bt_uuid_cmp(slot->discover_params.uuid,
                             BT_UUID_DECLARE_128(ZMK_SPLIT_BT_CHAR_POSITION_STATE_UUID))) {
         memcpy(&split_service_uuid, BT_UUID_GATT_CCC, sizeof(split_service_uuid));
-        discover_params.uuid = &split_service_uuid.uuid;
-        discover_params.start_handle = attr->handle + 2;
-        discover_params.type = BT_GATT_DISCOVER_DESCRIPTOR;
-        subscribe_params.value_handle = bt_gatt_attr_value_handle(attr);
+        slot->discover_params.uuid = &split_service_uuid.uuid;
+        slot->discover_params.start_handle = attr->handle + 2;
+        slot->discover_params.type = BT_GATT_DISCOVER_DESCRIPTOR;
+        slot->subscribe_params.value_handle = bt_gatt_attr_value_handle(attr);
 
-        err = bt_gatt_discover(conn, &discover_params);
+        err = bt_gatt_discover(conn, &slot->discover_params);
         if (err) {
             LOG_ERR("Discover failed (err %d)", err);
         }
