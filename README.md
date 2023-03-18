@@ -14,4 +14,9 @@ To review features, check out the [feature overview](https://zmk.dev/docs/). ZMK
 
 ## My build command
 
-For Aurora Lily58 in https://github.com/narze/zmk-config, run `make` in Devcontainer
+For Aurora Lily58 in https://github.com/narze/zmk-config, run `make` in Devcontainer (this repo), then copy them to each side in bootloader mode in zmk-config repo
+
+```shell
+cp ~/zmk-config/build/aurora_lily58_left.uf2 /Volumes/NICENANO/
+cp ~/zmk-config/build/aurora_lily58_right.uf2 /Volumes/NICENANO/
+```
