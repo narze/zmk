@@ -6,7 +6,6 @@
 
 #pragma once
 
-#include <drivers/sensor.h>
 #include <zephyr/types.h>
 #include <stddef.h>
 #include <zephyr/sys/util.h>
@@ -31,10 +30,6 @@ enum behavior_sensor_binding_process_mode {
 
 typedef int (*behavior_keymap_binding_callback_t)(struct zmk_behavior_binding *binding,
                                                   struct zmk_behavior_binding_event event);
-
-typedef int (*behavior_sensor_keymap_binding_callback_t)(struct zmk_behavior_binding *binding,
-                                                         const struct sensor_value value,
-                                                         int64_t timestamp);
 typedef int (*behavior_sensor_keymap_binding_process_callback_t)(
     struct zmk_behavior_binding *binding, struct zmk_behavior_binding_event event,
     enum behavior_sensor_binding_process_mode mode);
@@ -231,28 +226,7 @@ z_impl_behavior_sensor_keymap_binding_process(struct zmk_behavior_binding *bindi
         return -ENOTSUP;
     }
 
-    return api->sensor_binding_triggered(binding, sensor, timestamp);
-}
-
-__syscall int behavior_sensor_keymap_binding_triggered(struct zmk_behavior_binding *binding,
-                                                       const struct sensor_value value,
-                                                       int64_t timestamp);
-
-static inline int z_impl_behavior_sensor_keymap_binding_triggered(
-    struct zmk_behavior_binding *binding, const struct sensor_value value, int64_t timestamp) {
-    const struct device *dev = device_get_binding(binding->behavior_dev);
-
-    if (dev == NULL) {
-        return -EINVAL;
-    }
-
-    const struct behavior_driver_api *api = (const struct behavior_driver_api *)dev->api;
-
-    if (api->sensor_binding_triggered == NULL) {
-        return -ENOTSUP;
-    }
-
-    return api->sensor_binding_triggered(binding, value, timestamp);
+    return api->sensor_binding_process(binding, event, mode);
 }
 
 /**

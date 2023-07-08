@@ -6,8 +6,6 @@
 
 #pragma once
 
-#include <drivers/sensor.h>
-
 #define ZMK_SPLIT_RUN_BEHAVIOR_DEV_LEN 9
 
 struct zmk_split_run_behavior_data {

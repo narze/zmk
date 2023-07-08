@@ -20,3 +20,5 @@ For Aurora Lily58 in https://github.com/narze/zmk-config, run `make` in Devconta
 cp ~/zmk-config/build/aurora_lily58_left.uf2 /Volumes/NICENANO/
 cp ~/zmk-config/build/aurora_lily58_right.uf2 /Volumes/NICENANO/
 ```
+
+Getting stuck? Try updating your [toolchain](https://zmk.dev/docs/development/setup#initialize--update-zephyr-workspace) and try again

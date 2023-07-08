@@ -7,7 +7,6 @@
 #pragma once
 
 #include <zephyr/device.h>
-#include <drivers/sensor.h>
 #include <zephyr/drivers/sensor.h>
 
 #include <zmk/event_manager.h>
