@@ -4,11 +4,11 @@
  * SPDX-License-Identifier: MIT
  */
 
-#include <drivers/sensor.h>
-#include <devicetree.h>
-#include <init.h>
+#include <zephyr/drivers/sensor.h>
+#include <zephyr/devicetree.h>
+#include <zephyr/init.h>
 
-#include <logging/log.h>
+#include <zephyr/logging/log.h>
 
 LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
 
@@ -18,67 +18,92 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
 
 #if ZMK_KEYMAP_HAS_SENSORS
 
-struct sensors_data_item {
-    uint8_t sensor_number;
+struct sensors_item_cfg {
+    const struct zmk_sensor_config *config;
     const struct device *dev;
     struct sensor_trigger trigger;
+    uint8_t sensor_index;
 };
 
-#define _SENSOR_ITEM(node)                                                                         \
-    {.dev = NULL, .trigger = {.type = SENSOR_TRIG_DELTA, .chan = SENSOR_CHAN_ROTATION}},
-#define SENSOR_ITEM(idx, _)                                                                        \
-    COND_CODE_1(DT_NODE_HAS_STATUS(ZMK_KEYMAP_SENSORS_BY_IDX(idx), okay),                          \
-                (_SENSOR_ITEM(ZMK_KEYMAP_SENSORS_BY_IDX(idx))), ())
+#define _SENSOR_ITEM(idx, node)                                                                    \
+    {                                                                                              \
+        .dev = DEVICE_DT_GET_OR_NULL(node),                                                        \
+        .trigger = {.type = SENSOR_TRIG_DATA_READY, .chan = SENSOR_CHAN_ROTATION},                 \
+        .config = &configs[idx]                                                                    \
+    }
+#define SENSOR_ITEM(idx, _i) _SENSOR_ITEM(idx, ZMK_KEYMAP_SENSORS_BY_IDX(idx))
 
-static struct sensors_data_item sensors[] = {UTIL_LISTIFY(ZMK_KEYMAP_SENSORS_LEN, SENSOR_ITEM, 0)};
+#define PLUS_ONE(n) +1
+#define ZMK_KEYMAP_SENSORS_CHILD_COUNT (0 DT_FOREACH_CHILD(ZMK_KEYMAP_SENSORS_NODE, PLUS_ONE))
+#define SENSOR_CHILD_ITEM(node)                                                                    \
+    {                                                                                              \
+        .triggers_per_rotation =                                                                   \
+            DT_PROP_OR(node, triggers_per_rotation,                                                \
+                       DT_PROP_OR(ZMK_KEYMAP_SENSORS_NODE, triggers_per_rotation,                  \
+                                  CONFIG_ZMK_KEYMAP_SENSORS_DEFAULT_TRIGGERS_PER_ROTATION))        \
+    }
+#define SENSOR_CHILD_DEFAULTS(idx, arg)                                                            \
+    {                                                                                              \
+        .triggers_per_rotation =                                                                   \
+            DT_PROP_OR(ZMK_KEYMAP_SENSORS_NODE, triggers_per_rotation,                             \
+                       CONFIG_ZMK_KEYMAP_SENSORS_DEFAULT_TRIGGERS_PER_ROTATION)                    \
+    }
 
-static void zmk_sensors_trigger_handler(const struct device *dev, struct sensor_trigger *trigger) {
+static struct zmk_sensor_config configs[] = {
+#if ZMK_KEYMAP_SENSORS_CHILD_COUNT > 0
+    DT_FOREACH_CHILD_SEP(ZMK_KEYMAP_SENSORS_NODE, SENSOR_CHILD_ITEM, (, ))
+#else
+    LISTIFY(ZMK_KEYMAP_SENSORS_LEN, SENSOR_CHILD_DEFAULTS, (, ), 0)
+#endif
+};
+
+static struct sensors_item_cfg sensors[] = {LISTIFY(ZMK_KEYMAP_SENSORS_LEN, SENSOR_ITEM, (, ), 0)};
+
+static ATOMIC_DEFINE(pending_sensors, ZMK_KEYMAP_SENSORS_LEN);
+
+const struct zmk_sensor_config *zmk_sensors_get_config_at_index(uint8_t sensor_index) {
+    if (sensor_index > ARRAY_SIZE(configs)) {
+        return NULL;
+    }
+
+    return &configs[sensor_index];
+}
+
+static void trigger_sensor_data_for_position(uint32_t sensor_index) {
     int err;
-    struct sensors_data_item *item = CONTAINER_OF(trigger, struct sensors_data_item, trigger);
+    const struct sensors_item_cfg *item = &sensors[sensor_index];
 
-    LOG_DBG("sensor %d", item->sensor_number);
-
-    err = sensor_sample_fetch(dev);
+    err = sensor_sample_fetch(item->dev);
     if (err) {
         LOG_WRN("Failed to fetch sample from device %d", err);
         return;
     }
 
-    struct sensor_value value;
-    err = sensor_channel_get(dev, SENSOR_CHAN_ROTATION, &value);
-    if (err) {
-        LOG_WRN("Failed to get sensor rotation value: %d", err);
-        return;
-    }
-
     ZMK_EVENT_RAISE(new_zmk_sensor_event((struct zmk_sensor_event){
-        .sensor_number = item->sensor_number, .value = value, .timestamp = k_uptime_get()}));
+        .sensor_number = item->sensor_number, .sensor = dev, .timestamp = k_uptime_get()}));
 }
 
-static void zmk_sensors_init_item(const char *node, uint8_t i, uint8_t abs_i) {
-    LOG_DBG("Init %s at index %d with sensor_number %d", node, i, abs_i);
+static void zmk_sensors_init_item(uint8_t i) {
+    LOG_DBG("Init sensor at index %d", i);
 
-    sensors[i].dev = device_get_binding(node);
-    sensors[i].sensor_number = abs_i;
+    sensors[i].sensor_index = i;
 
     if (!sensors[i].dev) {
-        LOG_WRN("Failed to find device for %s", node);
+        LOG_DBG("No local device for %d", i);
         return;
     }
 
-    sensor_trigger_set(sensors[i].dev, &sensors[i].trigger, zmk_sensors_trigger_handler);
+    int err = sensor_trigger_set(sensors[i].dev, &sensors[i].trigger, zmk_sensors_trigger_handler);
+    if (err) {
+        LOG_WRN("Failed to set sensor trigger (%d)", err);
+    }
 }
 
-#define _SENSOR_INIT(node) zmk_sensors_init_item(DT_LABEL(node), local_index++, absolute_index++);
-#define SENSOR_INIT(idx, _i)                                                                       \
-    COND_CODE_1(DT_NODE_HAS_STATUS(ZMK_KEYMAP_SENSORS_BY_IDX(idx), okay),                          \
-                (_SENSOR_INIT(ZMK_KEYMAP_SENSORS_BY_IDX(idx))), (absolute_index++;))
+#define SENSOR_INIT(idx, _t) zmk_sensors_init_item(idx);
 
 static int zmk_sensors_init(const struct device *_arg) {
-    int local_index = 0;
-    int absolute_index = 0;
+    LISTIFY(ZMK_KEYMAP_SENSORS_LEN, SENSOR_INIT, (), 0)
 
-    UTIL_LISTIFY(ZMK_KEYMAP_SENSORS_LEN, SENSOR_INIT, 0)
     return 0;
 }
 
